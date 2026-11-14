@@ -137,5 +137,53 @@ async function seedPlayersFromRankings(pages = OSU.seedPages) {
   return count;
 }
 
-module.exports = { exchangeCode, getMe, seedPlayersFromRankings, getAppToken, fetchRankingsPage, mapRankingUser };
+async function fetchUserOsu(osuUserId) {
+  const token = await getAppToken();
+  return osuFetch(`https://osu.ppy.sh/api/v2/users/${osuUserId}/osu`, token);
+}
 
+function mapUserStats(data) {
+  const u = data || {};
+  const stats = u.statistics || u.statistics_rulesets?.osu || {};
+  const rankRaw = stats.global_rank ?? stats.rank?.global ?? u.global_rank ?? null;
+  const ppRaw = stats.pp ?? u.pp ?? stats.performance ?? null;
+  const global_rank = rankRaw != null && Number.isFinite(Number(rankRaw)) ? Number(rankRaw) : null;
+  const pp = ppRaw != null && Number.isFinite(Number(ppRaw)) ? Number(ppRaw) : null;
+  return {
+    osu_user_id: u.id,
+    username: u.username,
+    avatar_url: u.avatar_url || (u.id ? `https://a.ppy.sh/${u.id}` : null),
+    global_rank,
+    pp,
+  };
+}
+
+async function backfillMissingPlayerStats(limit = 500) {
+  const { query } = require('../db');
+  const { upsertPlayer } = require('./userService');
+  const { computeRarity } = require('./rarityService');
+  const rows = await query(
+    `SELECT osu_user_id FROM players WHERE global_rank IS NULL OR pp IS NULL ORDER BY id DESC LIMIT ?`,
+    [Number(limit) || 500]
+  );
+  let updated = 0;
+  let failed = 0;
+  for (const row of rows || []) {
+    try {
+      const data = await fetchUserOsu(row.osu_user_id);
+      const p = mapUserStats(data);
+      if (!p.osu_user_id) { failed++; continue; }
+      p.rarity_id = computeRarity(p);
+      await upsertPlayer(p);
+      updated++;
+      await new Promise(r => setTimeout(r, OSU.rateLimitDelayMs));
+    } catch (err) {
+      console.error('Backfill failed for', row.osu_user_id, err.message);
+      failed++;
+    }
+  }
+  return { checked: (rows || []).length, updated, failed };
+}
+
+
+module.exports = { exchangeCode, getMe, seedPlayersFromRankings, getAppToken, fetchRankingsPage, fetchUserOsu, mapRankingUser, mapUserStats, clearMockPlayers, backfillMissingPlayerStats };
