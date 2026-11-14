@@ -158,13 +158,18 @@ function mapUserStats(data) {
   };
 }
 
-async function backfillMissingPlayerStats(limit = 500) {
+async function backfillPlayerStats({ limit = 500, offset = 0, missingOnly = false } = {}) {
+  // Refreshes player stats (pp, rank, username/avatar, rarity) from osu! API.
+  // missingOnly=true: only players missing rank/pp. missingOnly=false (default): refresh pulled players in DB (batch via offset).
   const { query } = require('../db');
   const { upsertPlayer } = require('./userService');
   const { computeRarity } = require('./rarityService');
+  const lim = Math.max(1, Number(limit) || 500);
+  const off = Math.max(0, Number(offset) || 0);
+  const where = missingOnly ? 'WHERE global_rank IS NULL OR pp IS NULL' : '';
   const rows = await query(
-    `SELECT osu_user_id FROM players WHERE global_rank IS NULL OR pp IS NULL ORDER BY id DESC LIMIT ?`,
-    [Number(limit) || 500]
+    `SELECT id, osu_user_id FROM players ${where} ORDER BY id ASC LIMIT ? OFFSET ?`,
+    [lim, off]
   );
   let updated = 0;
   let failed = 0;
@@ -182,8 +187,15 @@ async function backfillMissingPlayerStats(limit = 500) {
       failed++;
     }
   }
-  return { checked: (rows || []).length, updated, failed };
+  const checked = (rows || []).length;
+  const nextOffset = off + checked;
+  return { checked, updated, failed, offset: off, nextOffset, hasMore: checked === lim, missingOnly: !!missingOnly };
+}
+
+// Back-compat wrapper
+async function backfillMissingPlayerStats(limit = 500) {
+  return backfillPlayerStats({ limit, offset: 0, missingOnly: true });
 }
 
 
-module.exports = { exchangeCode, getMe, seedPlayersFromRankings, getAppToken, fetchRankingsPage, fetchUserOsu, mapRankingUser, mapUserStats, clearMockPlayers, backfillMissingPlayerStats };
+module.exports = { exchangeCode, getMe, seedPlayersFromRankings, getAppToken, fetchRankingsPage, fetchUserOsu, mapRankingUser, mapUserStats, clearMockPlayers, backfillPlayerStats, backfillMissingPlayerStats };

@@ -1,26 +1,30 @@
 'use strict';
-const { RARITIES, RARITY_THRESHOLDS, LUCK, getRarityOrder } = require('../../config/gameConfig');
+const { RARITIES, RARITY_PP_THRESHOLDS, LUCK } = require('../../config/gameConfig');
 
-/** Compute player rarity from osu! global rank and pp. Highest matching tier wins. */
-function computeRarity({ global_rank, pp }) {
-  const rank = (global_rank == null || global_rank <= 0) ? Infinity : Number(global_rank);
+/** Compute player rarity from PP only (rank ignored). Thresholds evaluated highest to lowest. */
+function computeRarity({ pp }) {
   const points = Number(pp) || 0;
-  // Evaluate from highest rarity to lowest
-  const ordered = [...RARITY_THRESHOLDS].sort((a, b) => getRarityOrder(b.id) - getRarityOrder(a.id));
-  for (const t of ordered) {
-    if (rank <= t.maxRank && points >= t.minPP) return t.id;
-  }
+  const t = RARITY_PP_THRESHOLDS;
+  if (points >= t.dimensional) return 'dimensional';
+  if (points >= t.transcendant) return 'transcendant';
+  if (points >= t.glorious) return 'glorious';
+  if (points >= t.exalted) return 'exalted';
+  if (points >= t.legendary) return 'legendary';
+  if (points >= t.mythic) return 'mythic';
+  if (points >= t.epic) return 'epic';
+  if (points >= t.rare) return 'rare';
+  if (points >= t.uncommon) return 'uncommon';
   return 'common';
 }
 
 /**
  * Compute final luck.
- * finalLuck = baseLuck * (1 + permanentBonus) * temporaryMultiplier, capped.
+ * finalLuck = baseLuck * (1 + permanentBonus) * temporaryMultiplier (no upper cap).
  */
 function computeFinalLuck({ permanentBonus = 0, temporaryMultiplier = 1 } = {}) {
   const base = LUCK.baseLuck;
   const raw = base * (1 + Number(permanentBonus || 0)) * Number(temporaryMultiplier || 1);
-  return Math.min(LUCK.maxFinalLuck, Math.max(0.01, raw));
+  return Math.max(0.01, raw);
 }
 
 /**

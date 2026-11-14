@@ -104,7 +104,7 @@ async function getCollection(userId, { rarity, search, sortBy = 'discovered_at',
   const params = [userId];
   if (rarity) { where.push('p.rarity_id = ?'); params.push(rarity); }
   if (search) { where.push('p.username ILIKE ?'); params.push(`%${search}%`); } // ILIKE for pg; sqlite compat handled below
-  const rarityCase = `CASE p.rarity_id WHEN 'secret' THEN 6 WHEN 'mythic' THEN 5 WHEN 'legendary' THEN 4 WHEN 'epic' THEN 3 WHEN 'rare' THEN 2 WHEN 'uncommon' THEN 1 ELSE 0 END`;
+  const rarityCase = `CASE p.rarity_id WHEN 'dimensional' THEN 9 WHEN 'transcendant' THEN 8 WHEN 'glorious' THEN 7 WHEN 'exalted' THEN 6 WHEN 'legendary' THEN 5 WHEN 'mythic' THEN 4 WHEN 'epic' THEN 3 WHEN 'rare' THEN 2 WHEN 'uncommon' THEN 1 ELSE 0 END`;
   const sortMap = {
     rarity: rarityCase,
     rank: '(CASE WHEN p.global_rank IS NULL THEN 1 ELSE 0 END), p.global_rank',

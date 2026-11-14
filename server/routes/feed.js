@@ -9,6 +9,9 @@ router.get('/', async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit) || FEED.maxItems, 100);
     const sinceId = Number(req.query.sinceId) || 0;
+    const allowed = FEED.includeRarities || [];
+    if (!allowed.length) return res.json({ items: [], config: { pollIntervalMs: FEED.pollIntervalMs } });
+    const placeholders = allowed.map(() => '?').join(',');
     let rows;
     if (sinceId > 0) {
       rows = await query(`
@@ -17,8 +20,8 @@ router.get('/', async (req, res, next) => {
                p.username as player_username,p.avatar_url as player_avatar,p.global_rank,p.pp,p.osu_user_id
         FROM discovery_feed f
         JOIN users u ON u.id=f.user_id JOIN players p ON p.id=f.player_id
-        WHERE f.id > ? ORDER BY f.id ASC LIMIT ?
-      `, [sinceId, limit]);
+        WHERE f.id > ? AND f.rarity_id IN (${placeholders}) ORDER BY f.id ASC LIMIT ?
+      `, [sinceId, ...allowed, limit]);
     } else {
       const desc = await query(`
         SELECT f.id,f.rarity_id,f.created_at,
@@ -26,8 +29,8 @@ router.get('/', async (req, res, next) => {
                p.username as player_username,p.avatar_url as player_avatar,p.global_rank,p.pp,p.osu_user_id
         FROM discovery_feed f
         JOIN users u ON u.id=f.user_id JOIN players p ON p.id=f.player_id
-        ORDER BY f.id DESC LIMIT ?
-      `, [limit]);
+        WHERE f.rarity_id IN (${placeholders}) ORDER BY f.id DESC LIMIT ?
+      `, [...allowed, limit]);
       rows = [...(desc || [])].reverse();
     }
     res.json({ items: rows || [], config: { pollIntervalMs: FEED.pollIntervalMs } });

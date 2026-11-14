@@ -5,30 +5,39 @@
  */
 
 const RARITIES = [
-  { id: 'common',    name: 'Common',    color: '#9ca3af', order: 0, weight: 65.0,  feed: false, announce: false },
-  { id: 'uncommon',  name: 'Uncommon',  color: '#22c55e', order: 1, weight: 22.0,  feed: false, announce: false },
-  { id: 'rare',      name: 'Rare',      color: '#3b82f6', order: 2, weight: 9.0,   feed: 'optional', announce: false },
-  { id: 'epic',      name: 'Epic',      color: '#a855f7', order: 3, weight: 3.0,   feed: true,  announce: false },
-  { id: 'legendary', name: 'Legendary', color: '#f59e0b', order: 4, weight: 0.8,   feed: true,  announce: 'special' },
-  { id: 'mythic',    name: 'Mythic',    color: '#ef4444', order: 5, weight: 0.19,  feed: true,  announce: 'major' },
-  { id: 'secret',    name: 'Secret',    color: '#e879f9', order: 6, weight: 0.01,  feed: true,  announce: 'major' },
+  { id: 'common',       name: 'Common',       color: '#9ca3af', order: 0, weight: 60.0,   feed: false, announce: false },
+  { id: 'uncommon',     name: 'Uncommon',     color: '#22c55e', order: 1, weight: 22.0,   feed: false, announce: false },
+  { id: 'rare',         name: 'Rare',         color: '#3b82f6', order: 2, weight: 10.0,   feed: false, announce: false },
+  { id: 'epic',         name: 'Epic',         color: '#a855f7', order: 3, weight: 5.0,    feed: false, announce: false },
+  { id: 'mythic',       name: 'Mythic',       color: '#ef4444', order: 4, weight: 2.0,    feed: true,  announce: 'special' },
+  { id: 'legendary',    name: 'Legendary',    color: '#f59e0b', order: 5, weight: 0.7,    feed: true,  announce: 'special' },
+  { id: 'exalted',      name: 'Exalted',      color: '#f97316', order: 6, weight: 0.2,    feed: true,  announce: 'major' },
+  { id: 'glorious',     name: 'Glorious',     color: '#eab308', order: 7, weight: 0.07,   feed: true,  announce: 'major' },
+  { id: 'transcendant', name: 'Transcendant', color: '#67e8f9', order: 8, weight: 0.02,   feed: true,  announce: 'major' },
+  { id: 'dimensional',  name: 'Dimensional',  color: '#f472b6', order: 9, weight: 0.01,   feed: true,  announce: 'major' },
 ];
 
 /**
- * Determine rarity from osu! player stats.
- * Primary: global rank (lower is better). Secondary: pp.
- * Thresholds are evaluated top-down (highest rarity first).
- * rank: null/undefined means unranked/inactive -> treated as very low.
+ * Determine rarity from osu! player PP ONLY (rank is ignored).
+ * PP cutoffs correspond to approximate PP at ranks 1/10/100/500/1000/5000/10000/25k/100k.
+ * Thresholds evaluated top-down (highest first): pp >= minPP => that tier.
+ * Values are configurable to match current osu! meta.
  */
-const RARITY_THRESHOLDS = [
-  { id: 'secret',    maxRank: 10,        minPP: 12000 },
-  { id: 'mythic',    maxRank: 100,       minPP: 9000  },
-  { id: 'legendary', maxRank: 1000,      minPP: 7000  },
-  { id: 'epic',      maxRank: 10000,     minPP: 4500  },
-  { id: 'rare',      maxRank: 50000,     minPP: 2500  },
-  { id: 'uncommon',  maxRank: 250000,    minPP: 1000  },
-  { id: 'common',    maxRank: Infinity,  minPP: 0     },
-];
+const RARITY_PP_THRESHOLDS = {
+  dimensional:  31000, // ~rank 1
+  transcendant: 26000, // ~rank 10
+  glorious:     22000, // ~rank 100
+  exalted:      18500, // ~rank 500
+  legendary:    16500, // ~rank 1000
+  mythic:       12500, // ~rank 5000
+  epic:         10500, // ~rank 10000
+  rare:          8200, // ~rank 25000
+  uncommon:      4500, // ~rank 100000
+  common:           0, // 100k+
+};
+
+// Back-compat export name (shape no longer used for rank; kept to avoid breaking imports)
+const RARITY_THRESHOLDS = RARITY_PP_THRESHOLDS;
 
 function getRarityById(id) { return RARITIES.find(r => r.id === id) || RARITIES[0]; }
 function getRarityOrder(id) { return getRarityById(id).order; }
@@ -36,7 +45,6 @@ function getRarityOrder(id) { return getRarityById(id).order; }
 /** Luck config - all multipliers are factors applied to higher-rarity odds then renormalized */
 const LUCK = {
   baseLuck: 1.0,
-  maxFinalLuck: 10.0, // cap to prevent extreme stacking
   // Luck shifts probability mass toward rarer tiers. Formula in luck service.
   rarityBiasExponent: 0.85, // higher = luck benefits top rarities more
 };
@@ -98,8 +106,9 @@ const DAILY_QUESTS = [
 ];
 
 const FEED = {
-  includeRarities: ['epic', 'legendary', 'mythic', 'secret'], // rare optional via UI filter/config
-  optionalRarities: ['rare'],
+  // Global discovery feed only shows Mythic or higher
+  includeRarities: ['mythic', 'legendary', 'exalted', 'glorious', 'transcendant', 'dimensional'],
+  optionalRarities: [],
   pollIntervalMs: 5000,
   maxItems: 50,
 };
@@ -114,7 +123,7 @@ const OSU = {
 };
 
 module.exports = {
-  RARITIES, RARITY_THRESHOLDS, LUCK, TEMPORARY_ITEMS, PERMANENT_ITEMS,
+  RARITIES, RARITY_THRESHOLDS, RARITY_PP_THRESHOLDS, LUCK, TEMPORARY_ITEMS, PERMANENT_ITEMS,
   ROLLING, MILESTONES, DAILY_QUESTS, FEED, OSU,
   getRarityById, getRarityOrder,
 };

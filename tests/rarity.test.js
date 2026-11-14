@@ -4,22 +4,27 @@ const assert = require('node:assert/strict');
 const { computeRarity, computeFinalLuck, getRarityProbabilities, rollRarity } = require('../server/services/rarityService');
 const { RARITIES } = require('../config/gameConfig');
 
-test('computeRarity maps rank/pp to expected tiers', () => {
-  assert.equal(computeRarity({ global_rank: 1, pp: 14000 }), 'secret');
-  assert.equal(computeRarity({ global_rank: 50, pp: 9500 }), 'mythic');
-  assert.equal(computeRarity({ global_rank: 500, pp: 7500 }), 'legendary');
-  assert.equal(computeRarity({ global_rank: 5000, pp: 5000 }), 'epic');
-  assert.equal(computeRarity({ global_rank: 20000, pp: 3000 }), 'rare');
-  assert.equal(computeRarity({ global_rank: 100000, pp: 1500 }), 'uncommon');
-  assert.equal(computeRarity({ global_rank: 1000000, pp: 500 }), 'common');
-  assert.equal(computeRarity({ global_rank: null, pp: 0 }), 'common');
+test('computeRarity maps PP-only to expected tiers', () => {
+  // thresholds: dimensional>=31000, transcendant>=26000, glorious>=22000, exalted>=18500,
+  // legendary>=16500, mythic>=12500, epic>=10500, rare>=8200, uncommon>=4500, common otherwise
+  assert.equal(computeRarity({ pp: 32000 }), 'dimensional');
+  assert.equal(computeRarity({ pp: 27000 }), 'transcendant');
+  assert.equal(computeRarity({ pp: 23000 }), 'glorious');
+  assert.equal(computeRarity({ pp: 19000 }), 'exalted');
+  assert.equal(computeRarity({ pp: 17000 }), 'legendary');
+  assert.equal(computeRarity({ pp: 13000 }), 'mythic');
+  assert.equal(computeRarity({ pp: 11000 }), 'epic');
+  assert.equal(computeRarity({ pp: 9000 }), 'rare');
+  assert.equal(computeRarity({ pp: 5000 }), 'uncommon');
+  assert.equal(computeRarity({ pp: 1000 }), 'common');
+  assert.equal(computeRarity({ pp: null }), 'common');
 });
 
-test('computeFinalLuck applies formula and cap', () => {
+test('computeFinalLuck applies formula without cap', () => {
   assert.equal(computeFinalLuck({ permanentBonus: 0, temporaryMultiplier: 1 }), 1);
   assert.equal(computeFinalLuck({ permanentBonus: 0.5, temporaryMultiplier: 2 }), 3);
-  const capped = computeFinalLuck({ permanentBonus: 10, temporaryMultiplier: 10 });
-  assert.ok(capped <= 10);
+  const uncapped = computeFinalLuck({ permanentBonus: 10, temporaryMultiplier: 10 });
+  assert.equal(uncapped, 110);
 });
 
 test('rarity probabilities normalize to 1 and luck favors higher tiers', () => {
@@ -30,9 +35,9 @@ test('rarity probabilities normalize to 1 and luck favors higher tiers', () => {
   assert.ok(Math.abs(sumBase - 1) < 1e-9);
   assert.ok(Math.abs(sumLucky - 1) < 1e-9);
   const byId = (arr, id) => arr.find(x => x.id === id).probability;
-  // higher tiers should not decrease in absolute chance under strong luck? they should increase relative and typically absolute vs low-tier mass shift; ensure secret/mythic increase
-  assert.ok(byId(lucky, 'secret') > byId(base, 'secret'));
-  assert.ok(byId(lucky, 'mythic') > byId(base, 'mythic'));
+  // higher tiers should increase under strong luck
+  assert.ok(byId(lucky, 'dimensional') > byId(base, 'dimensional'));
+  assert.ok(byId(lucky, 'transcendant') > byId(base, 'transcendant'));
   assert.ok(byId(lucky, 'legendary') > byId(base, 'legendary'));
 });
 
