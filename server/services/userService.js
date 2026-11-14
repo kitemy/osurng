@@ -37,11 +37,19 @@ async function getStats(userId) {
 }
 
 async function upsertPlayer(player) {
-  // Upsert by osu_user_id and return row
+  // Upsert by osu_user_id and return row. Preserve existing stats/rarity when incoming data is missing.
   const row = await queryOne(
     `INSERT INTO players (osu_user_id,username,avatar_url,global_rank,pp,rarity_id)
      VALUES (?,?,?,?,?,?)
-     ON CONFLICT (osu_user_id) DO UPDATE SET username=EXCLUDED.username, avatar_url=EXCLUDED.avatar_url, global_rank=EXCLUDED.global_rank, pp=EXCLUDED.pp, rarity_id=EXCLUDED.rarity_id
+     ON CONFLICT (osu_user_id) DO UPDATE SET
+       username = COALESCE(EXCLUDED.username, players.username),
+       avatar_url = COALESCE(EXCLUDED.avatar_url, players.avatar_url),
+       global_rank = COALESCE(EXCLUDED.global_rank, players.global_rank),
+       pp = COALESCE(EXCLUDED.pp, players.pp),
+       rarity_id = CASE
+         WHEN EXCLUDED.global_rank IS NOT NULL OR EXCLUDED.pp IS NOT NULL THEN EXCLUDED.rarity_id
+         ELSE players.rarity_id
+       END
      RETURNING *`,
     [player.osu_user_id, player.username, player.avatar_url, player.global_rank, player.pp, player.rarity_id]
   );

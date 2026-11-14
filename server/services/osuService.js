@@ -77,14 +77,18 @@ async function fetchRankingsPage(mode = 'osu', type = 'performance', cursorPage 
 }
 
 function mapRankingUser(entry) {
-  const u = entry.user || entry;
-  const stats = u.statistics || entry.statistics || {};
+  const u = entry.user || entry || {};
+  const stats = u.statistics || entry.statistics || u.statistics_rulesets?.osu || entry.statistics_rulesets?.osu || {};
+  const rankRaw = entry.global_rank ?? stats.global_rank ?? stats.rank?.global ?? entry.rank ?? u.global_rank ?? null;
+  const ppRaw = entry.pp ?? stats.pp ?? entry.performance ?? u.pp ?? stats.performance ?? null;
+  const global_rank = rankRaw != null && Number.isFinite(Number(rankRaw)) ? Number(rankRaw) : null;
+  const pp = ppRaw != null && Number.isFinite(Number(ppRaw)) ? Number(ppRaw) : null;
   return {
-    osu_user_id: u.id,
-    username: u.username,
-    avatar_url: u.avatar_url,
-    global_rank: stats.global_rank ?? stats.rank?.global ?? null,
-    pp: stats.pp ?? null,
+    osu_user_id: u.id ?? entry.id ?? entry.user_id,
+    username: u.username ?? entry.username,
+    avatar_url: u.avatar_url ?? entry.avatar_url ?? (u.id ? `https://a.ppy.sh/${u.id}` : null),
+    global_rank,
+    pp,
   };
 }
 
