@@ -1,0 +1,14 @@
+# .gitignore
+node_modules/
+client/node_modules/
+dist/
+client/dist/
+data/
+.env
+.env.local
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+coverage/
+.neon
