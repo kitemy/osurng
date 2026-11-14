@@ -88,10 +88,25 @@ function mapRankingUser(entry) {
   };
 }
 
+async function clearMockPlayers() {
+  const { query, queryOne } = require('../db');
+  const where = `(username LIKE 'SecretLegend%' OR username LIKE 'MythicAce%' OR username LIKE 'LegendStar%' OR username LIKE 'EpicPro%' OR username LIKE 'RareTalent%' OR username LIKE 'UncommonPlayer%' OR username LIKE 'CommonPlayer%') AND osu_user_id >= 1000000 AND osu_user_id < 2000000`;
+  const ids = await query(`SELECT id FROM players WHERE ${where}`, []);
+  if (!ids || !ids.length) return 0;
+  const placeholders = ids.map(() => '?').join(',');
+  const vals = ids.map(r => r.id);
+  await query(`DELETE FROM discovery_feed WHERE player_id IN (${placeholders})`, vals);
+  await query(`DELETE FROM rolls WHERE player_id IN (${placeholders})`, vals);
+  await query(`DELETE FROM user_collections WHERE player_id IN (${placeholders})`, vals);
+  await query(`DELETE FROM players WHERE id IN (${placeholders})`, vals);
+  return ids.length;
+}
+
 async function seedPlayersFromRankings(pages = OSU.seedPages) {
   const { upsertPlayer } = require('./userService');
   const { computeRarity } = require('./rarityService');
   let count = 0;
+  let firstError = null;
   for (let page = 1; page <= pages; page++) {
     try {
       const data = await fetchRankingsPage('osu', 'performance', page);
@@ -106,9 +121,15 @@ async function seedPlayersFromRankings(pages = OSU.seedPages) {
       await new Promise(r => setTimeout(r, OSU.rateLimitDelayMs));
     } catch (err) {
       console.error('Seed page failed', page, err.message);
+      firstError = err;
       break;
     }
   }
+  if (count === 0) {
+    throw new Error(firstError ? `Failed to seed osu! players: ${firstError.message}` : 'No players returned from osu! rankings. Check OSU_CLIENT_ID/OSU_CLIENT_SECRET and API access.');
+  }
+  const removedMocks = await clearMockPlayers();
+  console.log(`Seeded ${count} osu! players, removed ${removedMocks} mock players.`);
   return count;
 }
 

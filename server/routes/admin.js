@@ -13,10 +13,11 @@ router.post('/seed-rankings', async (req, res) => {
       }
     }
     const pages = Number(req.query.pages) || undefined;
-    const count = await seedPlayersFromRankings(pages);
-    res.json({ ok: true, seeded: count });
+    const seeded = await seedPlayersFromRankings(pages);
+    res.json({ ok: true, seeded, message: 'Real osu! players seeded. Mock placeholder players (if any) were removed.' });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    const status = /not configured|Failed to seed|No players returned/i.test(e.message) ? 400 : 500;
+    res.status(status).json({ error: e.message });
   }
 });
 
