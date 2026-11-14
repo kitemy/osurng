@@ -33,13 +33,24 @@ export default function LeaderboardsPage({ ctx }) {
         <table className="table">
           <thead><tr><th>#</th><th>User</th><th>{t?.label}</th></tr></thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id || i}>
-                <td>{i+1}</td>
-                <td><div className="row"><img className="avatar sm" src={r.avatar_url||""} alt="" /> <strong>{r.username}</strong></div></td>
-                <td>{t?.fmt(r[t.field], r, rarities)}</td>
-              </tr>
-            ))}
+            {rows.map((r, i) => {
+              const href = r.osu_user_id ? `https://osu.ppy.sh/users/${r.osu_user_id}` : null;
+              return (
+                <tr key={r.id || i}>
+                  <td>{i+1}</td>
+                  <td>
+                    {href ? (
+                      <a className="row" href={href} target="_blank" rel="noreferrer" style={{color:"inherit", textDecoration:"none"}}>
+                        <img className="avatar sm" src={r.avatar_url||""} alt="" /> <strong>{r.username}</strong>
+                      </a>
+                    ) : (
+                      <div className="row"><img className="avatar sm" src={r.avatar_url||""} alt="" /> <strong>{r.username}</strong></div>
+                    )}
+                  </td>
+                  <td>{t?.fmt(r[t.field], r, rarities)}</td>
+                </tr>
+              );
+            })}
             {rows.length===0 && <tr><td colSpan={3} className="muted">No data yet.</td></tr>}
           </tbody>
         </table>

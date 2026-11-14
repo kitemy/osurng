@@ -109,6 +109,8 @@ const OSU = {
   playerFetchLimit: 50,            // per API page
   seedPages: 10,                   // pages to seed from rankings on startup/refresh
   rateLimitDelayMs: 1200,          // polite spacing between API calls
+  // Large pool: osu! rankings API is limited; for very large pools (e.g. 1,000,000) use `node scripts/seedMockPlayers.js 1000000`.
+  // Real osu! players are seeded via rankings; mock players use synthetic IDs (1,000,001+) and are removed when real ranking seed succeeds.
 };
 
 module.exports = {

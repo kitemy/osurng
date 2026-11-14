@@ -13,7 +13,7 @@ router.get('/', async (req, res, next) => {
     if (sinceId > 0) {
       rows = await query(`
         SELECT f.id,f.rarity_id,f.created_at,
-               u.username as user_username,u.avatar_url as user_avatar,
+               u.username as user_username,u.avatar_url as user_avatar,u.osu_user_id as user_osu_id,
                p.username as player_username,p.avatar_url as player_avatar,p.global_rank,p.pp,p.osu_user_id
         FROM discovery_feed f
         JOIN users u ON u.id=f.user_id JOIN players p ON p.id=f.player_id
@@ -22,7 +22,7 @@ router.get('/', async (req, res, next) => {
     } else {
       const desc = await query(`
         SELECT f.id,f.rarity_id,f.created_at,
-               u.username as user_username,u.avatar_url as user_avatar,
+               u.username as user_username,u.avatar_url as user_avatar,u.osu_user_id as user_osu_id,
                p.username as player_username,p.avatar_url as player_avatar,p.global_rank,p.pp,p.osu_user_id
         FROM discovery_feed f
         JOIN users u ON u.id=f.user_id JOIN players p ON p.id=f.player_id

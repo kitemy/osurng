@@ -29,7 +29,10 @@ Primary balance/config: `config/gameConfig.js`
 - `FEED.includeRarities`, `optionalRarities`, `pollIntervalMs`, `maxItems`. Feed rows inserted on qualifying discoveries (`server/services/userService.js`).
 
 ## osu! / pool
-- `OSU` cache TTL, seed pages, rate-limit delay. Seed mock pool: `node scripts/seedMockPlayers.js`. Seed from rankings (needs creds): `POST /api/admin/seed-rankings?pages=N`.
+- `OSU` cache TTL, seed pages, rate-limit delay. Real rankings seeding is limited by osu! API; use more pages for a larger *real* pool, but very large pools are impractical via rankings alone.
+- Seed mock/synthetic pool (scales to 1,000,000+): `node scripts/seedMockPlayers.js [targetCount]` (e.g. `node scripts/seedMockPlayers.js 1000000`, or `SEED_TARGET`/`SEED_BATCH` env vars). Generates synthetic players (IDs 1,000,001+) with rank/pp/rarity bands. Inserting 1M rows can take significant time and DB storage; run against your production DB (`DATABASE_URL`) and ensure adequate resources.
+- Seed from rankings (needs creds, real osu! users): `POST /api/admin/seed-rankings?pages=N` with `x-admin-secret`. Successful real seeding removes mock placeholder players (synthetic ID range) and their related feed/roll/collection rows.
+- Backfill missing rank/pp for real players: `POST /api/admin/backfill-stats?limit=N` or `node scripts/backfillPlayerStats.js [limit]` (repeat until complete).
 
-## Server-side authority
-- Rolls, luck, inventory changes, quest/milestone rewards, and stats are computed and persisted on the server with DB transactions. Client displays results only.
+## Profiles / links
+- Leaderboard entries and global discovery feed items link to osu! profiles (`https://osu.ppy.sh/users/<osu_user_id>`). Feed includes both discovering user and discovered player links. Roll and collection already link to player profiles.

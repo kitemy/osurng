@@ -9,9 +9,24 @@ const { applyQuestProgress, checkMilestones } = require('./questService');
 const lastRollAt = new Map();
 
 async function pickRandomPlayerByRarity(rarityId) {
-  let row = await queryOne(`SELECT * FROM players WHERE rarity_id=? ORDER BY RANDOM() LIMIT 1`, [rarityId]);
-  if (!row) row = await queryOne(`SELECT * FROM players ORDER BY RANDOM() LIMIT 1`, []);
-  return row;
+  // Efficient random pick for large pools (avoids ORDER BY RANDOM() full scan)
+  const { isPostgres } = require('../db');
+  let countRow = await queryOne(`SELECT COUNT(*) as c FROM players WHERE rarity_id=?`, [rarityId]);
+  let n = Number(countRow?.c || 0);
+  let where = 'WHERE rarity_id=?';
+  let params = [rarityId];
+  if (n <= 0) {
+    countRow = await queryOne(`SELECT COUNT(*) as c FROM players`, []);
+    n = Number(countRow?.c || 0);
+    where = '';
+    params = [];
+  }
+  if (n <= 0) return null;
+  const offset = Math.floor(Math.random() * n);
+  if (isPostgres) {
+    return queryOne(`SELECT * FROM players ${where} OFFSET ${offset} LIMIT 1`, params);
+  }
+  return queryOne(`SELECT * FROM players ${where} LIMIT 1 OFFSET ?`, [...params, offset]);
 }
 
 function assertCanRoll(userId, mode, totalRolls) {

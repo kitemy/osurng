@@ -180,9 +180,9 @@ function GlobalFeed({ rarities }) {
         {items.length===0 && <div className="muted small">No notable discoveries yet.</div>}
         {items.map(it => (
           <div key={it.id} className="feed-item">
-            <img className="avatar sm" src={it.user_avatar||""} alt="" />
+            {it.user_osu_id ? <a href={`https://osu.ppy.sh/users/${it.user_osu_id}`} target="_blank" rel="noreferrer"><img className="avatar sm" src={it.user_avatar||""} alt="" /></a> : <img className="avatar sm" src={it.user_avatar||""} alt="" />}
             <div style={{flex:1}}>
-              <div className="small"><strong>{it.user_username}</strong> found <strong>{it.player_username}</strong> <span className="badge" style={rstyle(it.rarity_id)}>{rarities.find(r=>r.id===it.rarity_id)?.name || it.rarity_id}</span></div>
+              <div className="small">{it.user_osu_id ? <a href={`https://osu.ppy.sh/users/${it.user_osu_id}`} target="_blank" rel="noreferrer"><strong>{it.user_username}</strong></a> : <strong>{it.user_username}</strong>} found <a href={`https://osu.ppy.sh/users/${it.osu_user_id}`} target="_blank" rel="noreferrer"><strong>{it.player_username}</strong></a> <span className="badge" style={rstyle(it.rarity_id)}>{rarities.find(r=>r.id===it.rarity_id)?.name || it.rarity_id}</span></div>
               <div className="meta">#{it.global_rank?.toLocaleString?.() || "?"} · {Math.round(it.pp||0)}pp · <a href={`https://osu.ppy.sh/users/${it.osu_user_id}`} target="_blank" rel="noreferrer">profile</a></div>
             </div>
           </div>
